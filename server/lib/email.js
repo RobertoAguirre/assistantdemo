@@ -25,12 +25,9 @@ async function enviarConResend(destino, bufferZip, ubicacion) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY no configurado');
 
-  const also = (process.env.REPORT_EMAIL_ALSO || '').trim();
-  const to = also ? [destino, also] : [destino];
-
   const body = {
     from: RESEND_SANDBOX_FROM,
-    to,
+    to: [destino],
     subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
     text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',
     attachments: [
