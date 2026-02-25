@@ -49,24 +49,14 @@ Ver **server/.env.example**. Para el demo completo necesitas: `SMTP_*`, `REPORT_
 
 Orden recomendado para ir levantando servicios y tener el flujo completo.
 
-### 1. Correo (Mailtrap o Mailgun)
+### 1. Correo (Resend)
 
-**Objetivo:** que el webhook pueda enviar el ZIP por correo.
+**Objetivo:** que el webhook envíe el ZIP por correo a una dirección real.
 
-- **Mailtrap (pruebas):** [mailtrap.io](https://mailtrap.io) → Inbox → SMTP. No envía a correos reales; ves los mensajes en el panel. Ideal para probar sin spamear.
-- **Mailgun (producción):** [mailgun.com](https://www.mailgun.com) → Sending → Domain o SMTP credentials. Para enviar a correos reales.
+- [Resend](https://resend.com) → regístrate → **API Keys** → crea una clave y cópiala.
+- En Render (Environment) añade **`RESEND_API_KEY`** con esa clave. Opcional: **`REPORT_EMAIL_TO`** (destino del reporte, ej. tu Gmail).
 
-En `.env`:
-
-```env
-SMTP_HOST=smtp.mailtrap.io   # o el que te den (Mailgun: smtp.mailgun.org)
-SMTP_PORT=2525               # Mailtrap suele usar 2525; Mailgun 587
-SMTP_USER=...
-SMTP_PASS=...
-REPORT_EMAIL_FROM=reportes@tudominio.com
-```
-
-Prueba: `POST /webhook/reporte` con `ubicacion`, `descripcion`, `email`, y opcionalmente fotos. Debe llegar el correo (en Mailtrap lo ves en el inbox).
+No hace falta configurar dominio: Resend usa `onboarding@resend.dev` como remitente. Los correos llegan a la bandeja real.
 
 ---
 
