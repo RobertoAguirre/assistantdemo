@@ -15,8 +15,10 @@ function getTransport() {
 }
 
 /**
- * Envía el reporte por Mailtrap Email API REST (token + dominio demo).
- * No requiere SMTP ni el SDK; usa fetch a send.api.mailtrap.io.
+ * Envía el reporte por Mailtrap Email API REST.
+ * Doc: https://api-docs.mailtrap.io/docs/mailtrap-api-docs/67f1d70aeb62c-send-email
+ * Endpoint: POST https://send.api.mailtrap.io/api/send
+ * Auth: header Api-Token o Authorization: Bearer {token}
  */
 async function enviarConMailtrapApi(destino, bufferZip, ubicacion) {
   const token = process.env.MAILTRAP_API_TOKEN;
@@ -25,30 +27,39 @@ async function enviarConMailtrapApi(destino, bufferZip, ubicacion) {
   const fromEmail = process.env.REPORT_EMAIL_FROM || 'reportes@demo.mailtrap.io';
   const fromName = process.env.REPORT_EMAIL_FROM_NAME || 'Reportes Mantenimiento';
 
+  const body = {
+    from: { email: fromEmail, name: fromName },
+    to: [{ email: destino }],
+    subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
+    text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',
+    attachments: [
+      {
+        filename: 'reporte-mantenimiento.zip',
+        content: bufferZip.toString('base64'),
+        type: 'application/zip',
+        disposition: 'attachment',
+      },
+    ],
+  };
+
   const res = await fetch('https://send.api.mailtrap.io/api/send', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Api-Token': token,
     },
-    body: JSON.stringify({
-      from: { email: fromEmail, name: fromName },
-      to: [{ email: destino }],
-      subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
-      text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',
-      attachments: [
-        {
-          filename: 'reporte-mantenimiento.zip',
-          content: bufferZip.toString('base64'),
-          type: 'application/zip',
-        },
-      ],
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Mailtrap API ${res.status}: ${errText}`);
+    let errDetail = errText;
+    try {
+      const j = JSON.parse(errText);
+      if (j.message) errDetail = j.message;
+      else if (j.errors) errDetail = JSON.stringify(j.errors);
+    } catch (_) {}
+    throw new Error(`Mailtrap API ${res.status}: ${errDetail}`);
   }
 }
 
