@@ -15,31 +15,41 @@ function getTransport() {
 }
 
 /**
- * Envía el reporte por Mailtrap Email API (token + dominio demo).
- * No requiere SMTP ni verificar dominio propio.
+ * Envía el reporte por Mailtrap Email API REST (token + dominio demo).
+ * No requiere SMTP ni el SDK; usa fetch a send.api.mailtrap.io.
  */
 async function enviarConMailtrapApi(destino, bufferZip, ubicacion) {
-  const { MailtrapClient } = await import('mailtrap');
   const token = process.env.MAILTRAP_API_TOKEN;
   if (!token) throw new Error('MAILTRAP_API_TOKEN no configurado');
 
   const fromEmail = process.env.REPORT_EMAIL_FROM || 'reportes@demo.mailtrap.io';
   const fromName = process.env.REPORT_EMAIL_FROM_NAME || 'Reportes Mantenimiento';
 
-  const client = new MailtrapClient({ token });
-  await client.send({
-    from: { email: fromEmail, name: fromName },
-    to: [{ email: destino }],
-    subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
-    text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',
-    attachments: [
-      {
-        filename: 'reporte-mantenimiento.zip',
-        content: bufferZip.toString('base64'),
-        type: 'application/zip',
-      },
-    ],
+  const res = await fetch('https://send.api.mailtrap.io/api/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Api-Token': token,
+    },
+    body: JSON.stringify({
+      from: { email: fromEmail, name: fromName },
+      to: [{ email: destino }],
+      subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
+      text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',
+      attachments: [
+        {
+          filename: 'reporte-mantenimiento.zip',
+          content: bufferZip.toString('base64'),
+          type: 'application/zip',
+        },
+      ],
+    }),
   });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Mailtrap API ${res.status}: ${errText}`);
+  }
 }
 
 export async function enviarReportePorCorreo(destino, bufferZip, ubicacion) {
