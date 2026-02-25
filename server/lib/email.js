@@ -14,18 +14,19 @@ function getTransport() {
   });
 }
 
+/** Resend dominio de prueba: sin verificar dominio. No usar REPORT_EMAIL_FROM con Resend. */
+const RESEND_SANDBOX_FROM = 'Reportes <onboarding@resend.dev>';
+
 /**
- * Resend: 100 correos/día gratis. Remitente onboarding@resend.dev (sin verificar dominio).
+ * Resend: 100/día. Siempre remitente onboarding@resend.dev (sin verificación de dominio).
  * Doc: https://resend.com/docs/api-reference/emails/send-email
  */
 async function enviarConResend(destino, bufferZip, ubicacion) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY no configurado');
 
-  const from = process.env.REPORT_EMAIL_FROM || 'Reportes <onboarding@resend.dev>';
-
   const body = {
-    from: from.includes('<') ? from : `Reportes <${from}>`,
+    from: RESEND_SANDBOX_FROM,
     to: [destino],
     subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
     text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',

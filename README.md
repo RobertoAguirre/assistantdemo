@@ -49,14 +49,15 @@ Ver **server/.env.example**. Para el demo completo necesitas: `SMTP_*`, `REPORT_
 
 Orden recomendado para ir levantando servicios y tener el flujo completo.
 
-### 1. Correo (Resend)
+### 1. Correo (probar envío del ZIP)
 
-**Objetivo:** que el webhook envíe el ZIP por correo a una dirección real.
+**Objetivo:** que el webhook envíe el ZIP por correo (incl. adjuntos).
 
-- [Resend](https://resend.com) → regístrate → **API Keys** → crea una clave y cópiala.
-- En Render (Environment) añade **`RESEND_API_KEY`** con esa clave. Opcional: **`REPORT_EMAIL_TO`** (destino del reporte, ej. tu Gmail).
+- **Resend (para probar sin configurar dominio):** [Resend](https://resend.com) → API Keys → crear clave. En Render: `RESEND_API_KEY` y **`REPORT_EMAIL_TO` = el mismo email con el que te registraste en Resend** (en modo prueba los correos solo llegan a ese destino). No hace falta verificar dominio; el backend usa `onboarding@resend.dev` como remitente.
 
-No hace falta configurar dominio: Resend usa `onboarding@resend.dev` como remitente. Los correos llegan a la bandeja real.
+- **SendGrid (SMTP, Nodemailer):** [SendGrid](https://sendgrid.com) → API Keys → crear. Settings → Sender Authentication → **Single Sender** (verifica un email). En Render: `SMTP_HOST=smtp.sendgrid.net`, `SMTP_PORT=587`, `SMTP_USER=apikey`, `SMTP_PASS=SG.xxx` (tu API key), `REPORT_EMAIL_FROM=el-email-verificado`. 100 correos/día gratis.
+
+- **Gmail (SMTP):** Contraseña de aplicación de Google → variables `SMTP_*` y `REPORT_EMAIL_FROM` con ese Gmail. Entrega real a cualquier destino.
 
 ---
 
