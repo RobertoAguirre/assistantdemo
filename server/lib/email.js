@@ -15,18 +15,27 @@ function getTransport() {
 }
 
 export async function enviarReportePorCorreo(destino, bufferZip, ubicacion) {
+  console.log('[email] enviarReportePorCorreo ->', destino, 'zip:', bufferZip?.length, 'bytes');
   const transport = getTransport();
   if (!transport) {
+    console.error('[email] SMTP no configurado: faltan SMTP_HOST, SMTP_USER o SMTP_PASS');
     throw new Error('Correo no configurado: define SMTP_HOST, SMTP_USER, SMTP_PASS en .env');
   }
   const from = process.env.REPORT_EMAIL_FROM || process.env.SMTP_USER;
-  await transport.sendMail({
-    from: from,
-    to: destino,
-    subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
-    text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',
-    attachments: [
-      { filename: 'reporte-mantenimiento.zip', content: bufferZip },
-    ],
-  });
+  try {
+    await transport.sendMail({
+      from: from,
+      to: destino,
+      subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
+      text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',
+      attachments: [
+        { filename: 'reporte-mantenimiento.zip', content: bufferZip },
+      ],
+    });
+    console.log('[email] Correo enviado OK a', destino);
+  } catch (err) {
+    console.error('[email] Error enviando correo:', err.message);
+    if (err.response) console.error('[email] Respuesta SMTP:', err.response);
+    throw err;
+  }
 }

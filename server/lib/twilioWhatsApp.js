@@ -5,7 +5,14 @@
 export async function fetchTwilioMediaUrls(mediaUrls) {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || !token) return [];
+  if (!sid || !token) {
+    console.log('[twilio-media] TWILIO_ACCOUNT_SID o TWILIO_AUTH_TOKEN no configurados, omitiendo fotos');
+    return [];
+  }
+  if (!mediaUrls.length) {
+    console.log('[twilio-media] Sin URLs de medios');
+    return [];
+  }
 
   const auth = Buffer.from(`${sid}:${token}`).toString('base64');
   const fotos = [];
@@ -17,13 +24,17 @@ export async function fetchTwilioMediaUrls(mediaUrls) {
       const res = await fetch(url, {
         headers: { Authorization: `Basic ${auth}` },
       });
-      if (!res.ok) continue;
+      if (!res.ok) {
+        console.log('[twilio-media] MediaUrl' + i, 'status', res.status);
+        continue;
+      }
       const buffer = Buffer.from(await res.arrayBuffer());
       const contentType = res.headers.get('content-type') || '';
       const ext = contentType.includes('png') ? 'png' : 'jpg';
       fotos.push({ buffer, name: `evidencia_${i + 1}.${ext}` });
-    } catch (_) {
-      // omitir si falla una imagen
+      console.log('[twilio-media] Descargada foto', i + 1, buffer.length, 'bytes');
+    } catch (e) {
+      console.log('[twilio-media] Error descargando MediaUrl' + i, e.message);
     }
   }
   return fotos;

@@ -56,8 +56,13 @@ app.post('/webhook/reporte', upload.array('fotos', 10), async (req, res) => {
  * El reporte se envía al correo en REPORT_EMAIL_TO.
  */
 app.post('/webhook/whatsapp', async (req, res) => {
+  console.log('[whatsapp] POST /webhook/whatsapp recibido', new Date().toISOString());
+  console.log('[whatsapp] Content-Type:', req.headers['content-type']);
+  console.log('[whatsapp] Body keys:', req.body ? Object.keys(req.body) : 'sin body');
+
   const contentType = (req.headers['content-type'] || '').toLowerCase();
   if (!contentType.includes('application/x-www-form-urlencoded') && !contentType.includes('application/json')) {
+    console.log('[whatsapp] Rechazado: Content-Type no válido');
     return res.status(400).send('Invalid content type');
   }
 
@@ -72,13 +77,19 @@ app.post('/webhook/whatsapp', async (req, res) => {
   const { ubicacion, descripcion } = parseWhatsAppBody(body);
   const email = (process.env.REPORT_EMAIL_TO || process.env.SMTP_USER || '').trim();
 
+  console.log('[whatsapp] Body texto:', body?.substring?.(0, 200) || body);
+  console.log('[whatsapp] Parseado -> ubicacion:', ubicacion, '| descripcion:', descripcion?.substring?.(0, 80));
+  console.log('[whatsapp] NumMedia:', numMedia, '| REPORT_EMAIL_TO:', email ? email.substring(0, 5) + '...' : 'NO CONFIGURADO');
+
   if (!email) {
+    console.log('[whatsapp] Error: REPORT_EMAIL_TO no configurado');
     res.type('text/xml').status(200).send(
       '<Response><Message>Error: no hay REPORT_EMAIL_TO configurado en el servidor.</Message></Response>'
     );
     return;
   }
   if (!ubicacion || !descripcion) {
+    console.log('[whatsapp] Rechazado: falta ubicación o descripción');
     res.type('text/xml').status(200).send(
       '<Response><Message>Envía: ubicación en la primera línea, descripción en el resto. Opcional: adjunta fotos.</Message></Response>'
     );
@@ -86,14 +97,24 @@ app.post('/webhook/whatsapp', async (req, res) => {
   }
 
   try {
+    console.log('[whatsapp] Descargando medios...');
     const fotos = await fetchTwilioMediaUrls(mediaUrls);
+    console.log('[whatsapp] Fotos descargadas:', fotos.length);
+
+    console.log('[whatsapp] Generando ZIP...');
     const zipBuffer = await buildZipBuffer(ubicacion, descripcion, fotos);
+    console.log('[whatsapp] ZIP generado, tamaño:', zipBuffer.length, 'bytes');
+
+    console.log('[whatsapp] Enviando correo a', email);
     await enviarReportePorCorreo(email, zipBuffer, ubicacion);
+    console.log('[whatsapp] Correo enviado correctamente');
+
     res.type('text/xml').status(200).send(
       '<Response><Message>Reporte generado y enviado a tu correo.</Message></Response>'
     );
   } catch (e) {
-    console.error(e);
+    console.error('[whatsapp] Error:', e.message);
+    console.error('[whatsapp] Stack:', e.stack);
     res.type('text/xml').status(200).send(
       '<Response><Message>Error al generar el reporte. Revisa los logs.</Message></Response>'
     );
