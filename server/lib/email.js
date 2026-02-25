@@ -14,12 +14,53 @@ function getTransport() {
   });
 }
 
+/**
+ * Envía el reporte por Mailtrap Email API (token + dominio demo).
+ * No requiere SMTP ni verificar dominio propio.
+ */
+async function enviarConMailtrapApi(destino, bufferZip, ubicacion) {
+  const { MailtrapClient } = await import('mailtrap');
+  const token = process.env.MAILTRAP_API_TOKEN;
+  if (!token) throw new Error('MAILTRAP_API_TOKEN no configurado');
+
+  const fromEmail = process.env.REPORT_EMAIL_FROM || 'reportes@demo.mailtrap.io';
+  const fromName = process.env.REPORT_EMAIL_FROM_NAME || 'Reportes Mantenimiento';
+
+  const client = new MailtrapClient({ token });
+  await client.send({
+    from: { email: fromEmail, name: fromName },
+    to: [{ email: destino }],
+    subject: `Reporte de Mantenimiento – ${ubicacion || 'Sin ubicación'}`,
+    text: 'Adjunto encontrará el reporte de mantenimiento correctivo y el acta de evidencia fotográfica (Word y PDF).',
+    attachments: [
+      {
+        filename: 'reporte-mantenimiento.zip',
+        content: bufferZip.toString('base64'),
+        type: 'application/zip',
+      },
+    ],
+  });
+}
+
 export async function enviarReportePorCorreo(destino, bufferZip, ubicacion) {
   console.log('[email] enviarReportePorCorreo ->', destino, 'zip:', bufferZip?.length, 'bytes');
+
+  if (process.env.MAILTRAP_API_TOKEN) {
+    console.log('[email] Usando Mailtrap API (token / dominio demo)');
+    try {
+      await enviarConMailtrapApi(destino, bufferZip, ubicacion);
+      console.log('[email] Correo enviado OK (Mailtrap API) a', destino);
+    } catch (err) {
+      console.error('[email] Error Mailtrap API:', err.message);
+      throw err;
+    }
+    return;
+  }
+
   const transport = getTransport();
   if (!transport) {
-    console.error('[email] SMTP no configurado: faltan SMTP_HOST, SMTP_USER o SMTP_PASS');
-    throw new Error('Correo no configurado: define SMTP_HOST, SMTP_USER, SMTP_PASS en .env');
+    console.error('[email] SMTP no configurado y no hay MAILTRAP_API_TOKEN');
+    throw new Error('Correo no configurado: define MAILTRAP_API_TOKEN o SMTP_HOST, SMTP_USER, SMTP_PASS');
   }
   const from = process.env.REPORT_EMAIL_FROM || process.env.SMTP_USER;
   try {
@@ -32,7 +73,7 @@ export async function enviarReportePorCorreo(destino, bufferZip, ubicacion) {
         { filename: 'reporte-mantenimiento.zip', content: bufferZip },
       ],
     });
-    console.log('[email] Correo enviado OK a', destino);
+    console.log('[email] Correo enviado OK (SMTP) a', destino);
   } catch (err) {
     console.error('[email] Error enviando correo:', err.message);
     if (err.response) console.error('[email] Respuesta SMTP:', err.response);
