@@ -47,6 +47,7 @@ async function enviarConMailtrapApi(destino, bufferZip, ubicacion) {
     headers: {
       'Content-Type': 'application/json',
       'Api-Token': token,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
